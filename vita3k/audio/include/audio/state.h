@@ -41,6 +41,10 @@ struct AudioOutPort {
     float volume = 1.0f;
     // length of the buffer for each call
     int len_bytes = 0;
+    // number of microseconds a buffer lasts for
+    uint64_t len_microseconds = 0;
+    // last time sceAudioOutOutput was called with this port (timestamp in microseconds)
+    uint64_t last_output = 0;
 
     // current config
     int type = 0;
@@ -114,11 +118,13 @@ struct AudioState {
     AudioInPort in_port;
     ResumeAudioThread resume_thread;
     std::string audio_backend;
+    float global_volume;
 
     bool init(const ResumeAudioThread &resume_thread, const std::string &adapter_name);
     void set_backend(const std::string &adapter_name);
     AudioOutPortPtr open_port(int nb_channels, int freq, int nb_sample);
     void audio_output(ThreadState &thread, AudioOutPort &out_port, const void *buffer);
     void set_volume(AudioOutPort &out_port, float volume);
+    void set_global_volume(float volume);
     void switch_state(const bool pause);
 };

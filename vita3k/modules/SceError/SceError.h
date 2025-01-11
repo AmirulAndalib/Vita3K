@@ -15,11 +15,9 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <cpu/read_arg.h>
-#include <cpu/vargs.h>
+#pragma once
 
-// Workaround for old Clang and GCC
-template <>
-module::vargs make_vargs(const LayoutArgsState &state) {
-    return module::vargs{ state };
-}
+#include <module/module.h>
+#include <util/tracy.h>
+
+DECL_EXPORT(SceInt32, _sceErrorGetExternalString, char *result, int err);

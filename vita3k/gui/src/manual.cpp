@@ -93,10 +93,10 @@ bool init_manual(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path
         int32_t width, height;
         for (const auto &manual : fs::directory_iterator(APP_PATH / manual_path)) {
             if (manual.path().extension() == ".png") {
-                const auto page_path = manual_path / manual.path().filename().string();
+                const auto page_path = manual_path / manual.path().filename();
 
                 vfs::FileBuffer buffer;
-                vfs::read_app_file(buffer, emuenv.pref_path.wstring(), app_path, page_path);
+                vfs::read_app_file(buffer, emuenv.pref_path, app_path, page_path);
 
                 if (buffer.empty()) {
                     LOG_WARN("Manual not found for title: {} [{}].", app_path, APP_INDEX->title);
@@ -106,7 +106,7 @@ bool init_manual(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path
                 // Load image data from memory buffer and check if it's valid
                 stbi_uc *data = stbi_load_from_memory(buffer.data(), static_cast<int>(buffer.size()), &width, &height, nullptr, STBI_rgb_alpha);
                 if (!data) {
-                    LOG_ERROR("Invalid manual image for title: {} [{}] in path: {}.", app_path, APP_INDEX->title, page_path.string());
+                    LOG_ERROR("Invalid manual image for title: {} [{}] in path: {}.", app_path, APP_INDEX->title, page_path);
                     return false;
                 }
 
@@ -141,7 +141,7 @@ void draw_manual(GuiState &gui, EmuEnvState &emuenv) {
     const auto SCALE = ImVec2(RES_SCALE.x * emuenv.dpi_scale, RES_SCALE.y * emuenv.dpi_scale);
     const ImVec2 WINDOW_POS(emuenv.viewport_pos.x, emuenv.viewport_pos.y);
     ImGui::SetNextWindowPos(WINDOW_POS, ImGuiCond_Always);
-    ImGui::BeginChild("##manual_page", display_size, false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::BeginChild("##manual_page", display_size, ImGuiChildFlags_None, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
 
     // Draw manual image if exists and is valid
     if (!gui.manuals.empty() && gui.manuals[current_page])
@@ -162,12 +162,12 @@ void draw_manual(GuiState &gui, EmuEnvState &emuenv) {
 
     // Set pos and begin child window for manual buttons
     ImGui::SetNextWindowPos(WINDOW_POS, ImGuiCond_Always);
-    ImGui::BeginChild("##manual_buttons", display_size, false, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::BeginChild("##manual_buttons", display_size, ImGuiChildFlags_None, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings);
 
     // Set window font scale for buttons
     ImGui::SetWindowFontScale(RES_SCALE.x);
 
-    // Hide button wien right click is pressed on mouse
+    // Hide button when right click is pressed on mouse
     if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(0))
         hidden_button = !hidden_button;
 
@@ -203,16 +203,16 @@ void draw_manual(GuiState &gui, EmuEnvState &emuenv) {
         const std::string slider = fmt::format("{:0>2d}/{:0>2d}", current_page + 1, (int32_t)gui.manuals.size());
         if (ImGui::Button(slider.c_str(), BUTTON_SIZE))
             ImGui::OpenPopup("Manual Slider");
-        const auto POPUP_HEIGTH = 64.f * SCALE.y;
-        ImGui::SetNextWindowPos(ImVec2(0.f, display_size.y - POPUP_HEIGTH), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(display_size.x, POPUP_HEIGTH), ImGuiCond_Always);
+        const auto POPUP_HEIGHT = 64.f * SCALE.y;
+        ImGui::SetNextWindowPos(ImVec2(0.f, display_size.y - POPUP_HEIGHT), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(display_size.x, POPUP_HEIGHT), ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(0.7f);
         if (ImGui::BeginPopupModal("Manual Slider", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings)) {
             const auto SLIDER_WIDTH = 800.f * SCALE.x;
             ImGui::PushItemWidth(SLIDER_WIDTH);
             ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 26.f * SCALE.y);
             ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 50.f * SCALE.y);
-            ImGui::SetCursorPos(ImVec2((display_size.x / 2) - (SLIDER_WIDTH / 2.f), (POPUP_HEIGTH / 2) - (15.f * SCALE.x)));
+            ImGui::SetCursorPos(ImVec2((display_size.x / 2) - (SLIDER_WIDTH / 2.f), (POPUP_HEIGHT / 2) - (15.f * SCALE.x)));
             ImGui::SliderInt("##slider_current_manual", &current_page, 0, (int32_t)gui.manuals.size() - 1, slider.c_str());
             ImGui::PopStyleVar(2);
             ImGui::PopItemWidth();

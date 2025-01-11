@@ -19,7 +19,8 @@
 
 #include <util/types.h>
 
-enum SceMotionErrorCode {
+enum SceMotionErrorCode : uint32_t {
+    SCE_MOTION_OK = 0x0,
     SCE_MOTION_ERROR_DATA_INVALID = 0x80360200,
     SCE_MOTION_ERROR_READING = 0x80360201,
     SCE_MOTION_ERROR_NON_INIT_ERR = 0x80360202,

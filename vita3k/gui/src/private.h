@@ -21,8 +21,6 @@
 
 #include <emuenv/state.h>
 
-struct ImVec4;
-
 namespace gui {
 
 #define RGBA_TO_FLOAT(r, g, b, a) ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f)
@@ -78,5 +76,11 @@ void draw_trophy_collection(GuiState &gui, EmuEnvState &emuenv);
 void draw_user_management(GuiState &gui, EmuEnvState &emuenv);
 
 void reevaluate_code(GuiState &gui, EmuEnvState &emuenv);
+
+void SetTooltipEx(const char *tooltip);
+void TextColoredCentered(const ImVec4 &col, const char *text);
+void TextCentered(const char *text);
+void TextColoredCentered(const ImVec4 &col, const char *text, float wrap_width);
+void TextCentered(const char *text, float wrap_width);
 
 } // namespace gui

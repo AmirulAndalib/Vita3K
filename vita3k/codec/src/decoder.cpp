@@ -23,8 +23,6 @@ extern "C" {
 
 #include <util/log.h>
 
-#include <cassert>
-
 uint32_t DecoderState::get(DecoderQuery query) {
     return 0;
 }
@@ -41,7 +39,7 @@ DecoderState::~DecoderState() {
     avcodec_free_context(&context);
 }
 
-// Handy to have this in logs, some debuggers dont seem to be able to evaluate there error macros properly.
+// Handy to have this in logs, some debuggers don't seem to be able to evaluate there error macros properly.
 std::string codec_error_name(int error) {
     switch (error) {
     case AVERROR(EAGAIN):

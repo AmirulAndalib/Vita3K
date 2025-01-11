@@ -24,6 +24,7 @@
 #include <gui/functions.h>
 
 #include <config/state.h>
+#include <dialog/state.h>
 #include <packages/sfo.h>
 
 #include <io/VitaIoDevice.h>
@@ -53,8 +54,8 @@ void get_app_info(GuiState &gui, EmuEnvState &emuenv, const std::string &app_pat
         auto &lang = gui.lang.app_context.info;
         gui.app_selector.app_info.trophy = fs::exists(APP_PATH / "sce_sys/trophy") ? lang["eligible"] : lang["ineligible"];
 
-        const auto last_writen = fs::last_write_time(APP_PATH);
-        SAFE_LOCALTIME(&last_writen, &gui.app_selector.app_info.updated);
+        const auto last_written = fs::last_write_time(APP_PATH);
+        SAFE_LOCALTIME(&last_written, &gui.app_selector.app_info.updated);
     }
 }
 
@@ -106,8 +107,8 @@ static void get_save_data_list(GuiState &gui, EmuEnvState &emuenv) {
         if (fs::is_directory(save.path()) && !fs::is_empty(save.path()) && get_app_index(gui, title_id)) {
             tm updated_tm = {};
 
-            const auto last_writen = fs::last_write_time(save);
-            SAFE_LOCALTIME(&last_writen, &updated_tm);
+            const auto last_written = fs::last_write_time(save);
+            SAFE_LOCALTIME(&last_written, &updated_tm);
 
             const auto size = get_recursive_directory_size(save);
             save_data_list.push_back({ get_app_index(gui, title_id)->title, title_id, size, updated_tm });
@@ -204,15 +205,15 @@ static void get_content_info(GuiState &gui, EmuEnvState &emuenv) {
         for (const auto &addcont : fs::directory_iterator(ADDCONT_PATH)) {
             const auto content_id = addcont.path().stem().string();
 
-            const auto last_writen = fs::last_write_time(addcont);
-            SAFE_LOCALTIME(&last_writen, &addcont_info[content_id].date);
+            const auto last_written = fs::last_write_time(addcont);
+            SAFE_LOCALTIME(&last_written, &addcont_info[content_id].date);
 
             const auto addcont_size = get_recursive_directory_size(addcont);
             addcont_info[content_id].size = get_unit_size(addcont_size);
 
             const auto content_path{ fs::path("addcont") / app_selected / content_id };
             vfs::FileBuffer params;
-            if (vfs::read_file(VitaIoDevice::ux0, params, emuenv.pref_path.wstring(), content_path.string() + "/sce_sys/param.sfo")) {
+            if (vfs::read_file(VitaIoDevice::ux0, params, emuenv.pref_path, content_path / "sce_sys/param.sfo")) {
                 SfoFile sfo_handle;
                 sfo::load(sfo_handle, params);
                 if (!sfo::get_data_by_key(addcont_info[content_id].name, sfo_handle, fmt::format("TITLE_{:0>2d}", emuenv.cfg.sys_lang)))
@@ -311,7 +312,7 @@ void draw_content_manager(GuiState &gui, EmuEnvState &emuenv) {
     const auto CHILD_SIZE = menu == "info" ? SIZE_INFO : SIZE_LIST;
     ImGui::SetNextWindowPos(ImVec2(WINDOW_POS.x + (WINDOW_SIZE.x / 2.f) - (CHILD_SIZE.x / 2.f), WINDOW_POS.y + (menu == "info" ? 98.f : 70.0f) * SCALE.y), ImGuiCond_Always);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.f * SCALE.x);
-    ImGui::BeginChild("##content_manager_child", CHILD_SIZE, false, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::BeginChild("##content_manager_child", CHILD_SIZE, ImGuiChildFlags_None, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
     if (menu.empty()) {
         title = lang.main["title"];
@@ -381,7 +382,7 @@ void draw_content_manager(GuiState &gui, EmuEnvState &emuenv) {
             ImGui::SetNextWindowBgAlpha(0.999f);
             ImGui::SetNextWindowPos(ImVec2(WINDOW_POS.x + (WINDOW_SIZE.x / 2.f) - (POPUP_SIZE.x / 2), WINDOW_POS.y + (WINDOW_SIZE.y / 2.f) - (POPUP_SIZE.y / 2)), ImGuiCond_Always);
             ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.f * SCALE.x);
-            ImGui::BeginChild("##app_delete_child", POPUP_SIZE, true, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings);
+            ImGui::BeginChild("##app_delete_child", POPUP_SIZE, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings);
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.f * SCALE.x);
             ImGui::SetWindowFontScale(1.6f * RES_SCALE.x);
             ImGui::SetCursorPos(ImVec2(52.f * SCALE.x, 80.f * SCALE.y));

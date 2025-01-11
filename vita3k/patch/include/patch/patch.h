@@ -17,22 +17,16 @@
 
 #pragma once
 
-#include <cstdint>
+#include <string>
+#include <util/fs.h>
+#include <util/types.h>
+#include <vector>
 
-#include <gxm/types.h>
-#include <mem/ptr.h>
-#include <renderer/gxm_types.h>
-
-struct MemState;
-
-namespace renderer {
-
-struct State;
-
-enum SurfaceTextureRetrievePurpose {
-    READING,
-    WRITING,
+struct Patch {
+    uint8_t seg;
+    uint32_t offset;
+    std::vector<uint8_t> values;
 };
 
-class SurfaceCache {};
-} // namespace renderer
+std::vector<Patch> get_patches(fs::path &path, const std::string &titleid);
+Patch parse_patch(const std::string &patch);

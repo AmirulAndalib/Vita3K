@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <util/fs.h>
+
 #include <map>
 #include <mutex>
 #include <string>
@@ -24,7 +26,7 @@
 
 struct RegMgrState {
     std::mutex mutex;
-    std::wstring system_dreg_path;
+    fs::path system_dreg_path;
 
     std::map<std::string, std::map<std::string, std::vector<char>>> system_dreg;
 };

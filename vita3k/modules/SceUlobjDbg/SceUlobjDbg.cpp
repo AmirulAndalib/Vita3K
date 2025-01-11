@@ -15,12 +15,12 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <gtest/gtest.h>
-#include <shader/usse_program_analyzer.h>
+#include <module/module.h>
 
-#include <unordered_map>
+EXPORT(int, SceUlobjDbg_D7F0F610) {
+    return UNIMPLEMENTED();
+}
 
-using namespace shader;
-
-TEST(program_analyzer, simple_branching) {
+EXPORT(int, SceUlobjDbg_F9C0F5DA) {
+    return UNIMPLEMENTED();
 }

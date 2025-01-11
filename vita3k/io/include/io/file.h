@@ -17,10 +17,7 @@
 
 #pragma once
 
-#include <io/util.h>
-
-#include <cassert>
-#include <cstring>
+#include <cstddef>
 #include <vector>
 
 class ReadOnlyInMemFile {

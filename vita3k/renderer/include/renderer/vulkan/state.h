@@ -25,7 +25,6 @@
 #include <renderer/vulkan/surface_cache.h>
 #include <renderer/vulkan/types.h>
 
-typedef void *ImTextureID;
 struct Config;
 
 namespace renderer::vulkan {
@@ -74,6 +73,9 @@ struct VKState : public renderer::State {
     vk::CommandPool general_command_pool;
     // Transfer pool has transient bit set.
     vk::CommandPool transfer_command_pool;
+    // command pool which can be used from multiple thread
+    vk::CommandPool multithread_command_pool;
+    std::mutex multithread_pool_mutex;
 
     // objects for which one copy is needed for every frame being rendered at the same time
     std::array<FrameObject, MAX_FRAMES_RENDERING> frames;
@@ -99,7 +101,7 @@ struct VKState : public renderer::State {
 
     VKState(int gpu_idx);
 
-    bool init(const fs::path &static_assets, const bool hashless_texture_cache) override;
+    bool init() override;
     bool create(SDL_Window *window, std::unique_ptr<renderer::State> &state, const Config &config);
     void late_init(const Config &cfg, const std::string_view game_id, MemState &mem) override;
     void cleanup();
@@ -111,6 +113,8 @@ struct VKState : public renderer::State {
     void render_frame(const SceFVector2 &viewport_pos, const SceFVector2 &viewport_size, DisplayState &display,
         const GxmState &gxm, MemState &mem) override;
     void swap_window(SDL_Window *window) override;
+    std::vector<uint32_t> dump_frame(DisplayState &display, uint32_t &width, uint32_t &height) override;
+
     uint32_t get_features_mask() override;
     int get_supported_filters() override;
     void set_screen_filter(const std::string_view &filter) override;
@@ -125,6 +129,7 @@ struct VKState : public renderer::State {
     // return the GPU buffer device address matching this one
     uint64_t get_matching_device_address(const Address address);
     std::vector<std::string> get_gpu_list() override;
+    std::string_view get_gpu_name() override;
 
     void precompile_shader(const ShadersHash &hash) override;
     void preclose_action() override;

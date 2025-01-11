@@ -19,8 +19,6 @@
 #include <gui/functions.h>
 #include <io/state.h>
 
-#include <util/string_utils.h>
-
 #include "private.h"
 
 namespace gui {
@@ -84,8 +82,8 @@ static void draw_emulation_menu(GuiState &gui, EmuEnvState &emuenv) {
         ImGui::SetWindowFontScale(RES_SCALE.x);
         if (ImGui::BeginMenu(lang["last_apps_used"].c_str())) {
             if (!app_list_is_empty) {
-                for (auto i = 0; i < std::min(8, int32_t(gui.time_apps[emuenv.io.user_id].size())); i++) {
-                    const auto time_app = gui.time_apps[emuenv.io.user_id][i];
+                for (size_t i = 0; i < std::min<size_t>(8, gui.time_apps[emuenv.io.user_id].size()); i++) {
+                    const auto &time_app = gui.time_apps[emuenv.io.user_id][i];
                     const auto app_index = get_app_index(gui, time_app.app);
                     if (app_index)
                         draw_app(*app_index);
@@ -105,7 +103,7 @@ static void draw_emulation_menu(GuiState &gui, EmuEnvState &emuenv) {
 
 static void draw_debug_menu(GuiState &gui, DebugMenuState &state) {
     auto &lang = gui.lang.main_menubar.debug;
-    if (ImGui::BeginMenu("Debug")) {
+    if (ImGui::BeginMenu(lang["title"].c_str())) {
         ImGui::MenuItem(lang["threads"].c_str(), nullptr, &state.threads_dialog);
         ImGui::MenuItem(lang["semaphores"].c_str(), nullptr, &state.semaphores_dialog);
         ImGui::MenuItem(lang["mutexes"].c_str(), nullptr, &state.mutexes_dialog);

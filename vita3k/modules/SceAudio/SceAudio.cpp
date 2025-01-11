@@ -44,7 +44,7 @@ enum SceAudioOutPortType {
     SCE_AUDIO_OUT_PORT_TYPE_VOICE = 2
 };
 
-enum SceAudioOutErrorCode {
+enum SceAudioOutErrorCode : uint32_t {
     SCE_AUDIO_OUT_ERROR_NOT_OPENED = 0x80260001,
     SCE_AUDIO_OUT_ERROR_BUSY = 0x80260002,
     SCE_AUDIO_OUT_ERROR_INVALID_PORT = 0x80260003,
@@ -252,7 +252,7 @@ EXPORT(int, sceAudioOutSetCompress) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceAudioOutSetConfig, int port, SceSize len, int freq, SceAudioOutMode mode) {
+EXPORT(int, sceAudioOutSetConfig, int port, int len, int freq, int mode) {
     TRACY_FUNC(sceAudioOutSetConfig, port, len, freq, mode);
     if (len == 0)
         return RET_ERROR(SCE_AUDIO_OUT_ERROR_INVALID_SIZE);

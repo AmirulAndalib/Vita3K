@@ -17,8 +17,9 @@
 
 #pragma once
 
-#include <functional>
 #include <mem/util.h>
+
+#include <functional>
 
 template <typename T>
 class Ptr;
@@ -27,7 +28,7 @@ class Block {
 public:
     typedef std::function<void(Address)> Deleter;
 
-    explicit Block(Address addr, Deleter deleter)
+    explicit Block(Address addr, const Deleter &deleter)
         : addr(addr)
         , deleter(deleter) {
     }
@@ -50,6 +51,9 @@ public:
         deleter = nullptr;
         return *this;
     }
+
+    Block(const Block &) = delete;
+    const Block &operator=(const Block &) = delete;
 
     ~Block() {
         if (deleter) {
@@ -82,9 +86,6 @@ public:
     }
 
 private:
-    Block(const Block &) = delete;
-    const Block &operator=(const Block &) = delete;
-
     Address addr;
     Deleter deleter;
 };

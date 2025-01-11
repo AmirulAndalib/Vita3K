@@ -19,8 +19,9 @@
 
 #include <cpu/common.h>
 
+struct MemState;
 struct KernelState;
-
+typedef int SceUID;
 typedef std::function<void(CPUState &cpu, uint32_t nid, SceUID thread_id)> CallImportFunc;
 
 struct CPUProtocol : public CPUProtocolBase {
@@ -28,7 +29,7 @@ struct CPUProtocol : public CPUProtocolBase {
     ~CPUProtocol() override = default;
     void call_svc(CPUState &cpu, uint32_t svc, Address pc, ThreadState &thread) override;
     Address get_watch_memory_addr(Address addr) override;
-    ExclusiveMonitorPtr get_exlusive_monitor() override;
+    ExclusiveMonitorPtr get_exclusive_monitor() override;
 
 private:
     CallImportFunc call_import;

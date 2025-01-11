@@ -29,9 +29,7 @@
 #include <ngs/state.h>
 #include <renderer/state.h>
 
-#include <nids/functions.h>
 #include <renderer/functions.h>
-#include <rtc/rtc.h>
 #include <util/fs.h>
 #include <util/lock_and_find.h>
 #include <util/log.h>
@@ -43,12 +41,14 @@
 
 #include <gdbstub/functions.h>
 
-#include <renderer/vulkan/functions.h>
-#include <util/string_utils.h>
-
 #include <SDL.h>
 #include <SDL_video.h>
 #include <SDL_vulkan.h>
+
+#ifdef _WIN32
+#include <SDL_syswm.h>
+#include <dwmapi.h>
+#endif
 
 namespace app {
 void update_viewport(EmuEnvState &state) {
@@ -65,7 +65,7 @@ void update_viewport(EmuEnvState &state) {
         break;
 
     default:
-        LOG_ERROR("Unimplemented backend render: {}.", static_cast<int>(state.renderer->current_backend));
+        LOG_ERROR("Unimplemented backend renderer: {}.", static_cast<int>(state.renderer->current_backend));
         break;
     }
 
@@ -103,127 +103,163 @@ void update_viewport(EmuEnvState &state) {
 }
 
 void init_paths(Root &root_paths) {
-    const auto dir_sep = std::string{ fs::path::preferred_separator };
-    auto base_path = SDL_GetBasePath();
-    auto pref_path = SDL_GetPrefPath(org_name, app_name);
-    root_paths.set_base_path(string_utils::utf_to_wide(base_path));
-    root_paths.set_pref_path(string_utils::utf_to_wide(pref_path));
-    root_paths.set_log_path(string_utils::utf_to_wide(base_path));
-    root_paths.set_config_path(string_utils::utf_to_wide(base_path));
-    root_paths.set_static_assets_path(string_utils::utf_to_wide(base_path));
-    root_paths.set_shared_path(string_utils::utf_to_wide(base_path));
-    root_paths.set_cache_path(fs::path(string_utils::utf_to_wide(base_path)) / "cache" / dir_sep);
-    SDL_free(base_path);
-    SDL_free(pref_path);
+    auto sdl_base_path = SDL_GetBasePath();
+    auto base_path = fs_utils::utf8_to_path(sdl_base_path);
+    SDL_free(sdl_base_path);
 
-#if defined(__linux__) && !defined(__ANDROID__) && !defined(__APPLE__)
-    // XDG Data Dirs.
-    auto env_home = getenv("HOME");
-    auto XDG_DATA_DIRS = getenv("XDG_DATA_DIRS");
-    auto XDG_DATA_HOME = getenv("XDG_DATA_HOME");
-    auto XDG_CACHE_HOME = getenv("XDG_CACHE_HOME");
-    auto XDG_CONFIG_HOME = getenv("XDG_CONFIG_HOME");
-    auto APPDIR = getenv("APPDIR"); // Used in AppImage
+    root_paths.set_base_path(base_path);
+    root_paths.set_static_assets_path(base_path);
 
-    if (XDG_DATA_HOME != NULL)
-        root_paths.set_pref_path(fs::path(XDG_DATA_HOME) / app_name / app_name / dir_sep);
-
-    if (XDG_CONFIG_HOME != NULL)
-        root_paths.set_config_path(fs::path(XDG_CONFIG_HOME) / app_name / dir_sep);
-    else if (env_home != NULL)
-        root_paths.set_config_path(fs::path(env_home) / ".config" / app_name / dir_sep);
-
-    if (XDG_CACHE_HOME != NULL) {
-        root_paths.set_cache_path(fs::path(XDG_CACHE_HOME) / app_name / dir_sep);
-        root_paths.set_log_path(fs::path(XDG_CACHE_HOME) / app_name / dir_sep);
-    } else if (env_home != NULL) {
-        root_paths.set_cache_path(fs::path(env_home) / ".cache" / app_name / dir_sep);
-        root_paths.set_log_path(fs::path(env_home) / ".cache" / app_name / dir_sep);
-    }
-
-    // Don't assume that base_path is portable.
-    if (fs::exists(root_paths.get_base_path() / "data") && fs::exists(root_paths.get_base_path() / "lang") && fs::exists(root_paths.get_base_path() / "shaders-builtin"))
-        root_paths.set_static_assets_path(root_paths.get_base_path());
-    else if (env_home != NULL)
-        root_paths.set_static_assets_path(fs::path(env_home) / ".local/share" / app_name / dir_sep);
-
-    if (XDG_DATA_DIRS != NULL) {
-        auto env_paths = string_utils::split_string(XDG_DATA_DIRS, ':');
-        for (auto &i : env_paths) {
-            if (fs::exists(fs::path(i) / app_name)) {
-                root_paths.set_static_assets_path(fs::path(i) / app_name / dir_sep);
-                break;
-            }
-        }
-    } else if (XDG_DATA_HOME != NULL) {
-        if (fs::exists(fs::path(XDG_DATA_HOME) / app_name / "data") && fs::exists(fs::path(XDG_DATA_HOME) / app_name / "lang") && fs::exists(fs::path(XDG_DATA_HOME) / app_name / "shaders-builtin"))
-            root_paths.set_static_assets_path(fs::path(XDG_DATA_HOME) / app_name / dir_sep);
-    }
-
-    if (APPDIR != NULL && fs::exists(fs::path(APPDIR) / "usr/share/Vita3K")) {
-        root_paths.set_static_assets_path(fs::path(APPDIR) / "usr/share/Vita3K");
-    }
-
-    // shared path
-    if (env_home != NULL)
-        root_paths.set_shared_path(fs::path(env_home) / ".local/share" / app_name / dir_sep);
-
-    if (XDG_DATA_DIRS != NULL) {
-        auto env_paths = string_utils::split_string(XDG_DATA_DIRS, ':');
-        for (auto &i : env_paths) {
-            if (fs::exists(fs::path(i) / app_name)) {
-                root_paths.set_shared_path(fs::path(i) / app_name / dir_sep);
-                break;
-            }
-        }
-    } else if (XDG_DATA_HOME != NULL) {
-        root_paths.set_shared_path(fs::path(XDG_DATA_HOME) / app_name / dir_sep);
-    }
+#if defined(__APPLE__)
+    // On Apple platforms, base_path is "Contents/Resources/" inside the app bundle.
+    // An extra parent_path is apparently needed because of the trailing slash.
+    auto portable_path = base_path.parent_path().parent_path().parent_path().parent_path() / "portable" / "";
+#else
+    auto portable_path = base_path / "portable" / "";
 #endif
 
+    if (fs::is_directory(portable_path)) {
+        // If a portable directory exists, use it for everything else.
+        // Note that pref_path should not be the same as the other paths.
+        root_paths.set_pref_path(portable_path / "fs" / "");
+        root_paths.set_log_path(portable_path);
+        root_paths.set_config_path(portable_path);
+        root_paths.set_shared_path(portable_path);
+        root_paths.set_cache_path(portable_path / "cache" / "");
+        root_paths.set_patch_path(portable_path / "patch" / "");
+    } else {
+        // SDL_GetPrefPath is deferred as it creates the directory.
+        // When using a portable directory, it is not needed.
+        auto sdl_pref_path = SDL_GetPrefPath(org_name, app_name);
+        auto pref_path = fs_utils::utf8_to_path(sdl_pref_path);
+        SDL_free(sdl_pref_path);
+
+#if defined(__APPLE__)
+        // Store other data in the user-wide path. Otherwise we may end up dumping
+        // files into the "/Applications/" install directory or the app bundle.
+        // This will typically be "~/Library/Application Support/Vita3K/Vita3K/".
+        // Check for config.yml first, though, to maintain backwards compatibility,
+        // even though storing user data inside the app bundle is not a good idea.
+        auto existing_config = base_path / "config.yml";
+        if (!fs::exists(existing_config)) {
+            base_path = pref_path;
+        }
+
+        // pref_path should not be the same as the other paths.
+        // For backwards compatibility, though, check if ux0 exists first.
+        auto existing_ux0 = pref_path / "ux0";
+        if (!fs::is_directory(existing_ux0)) {
+            pref_path = pref_path / "fs" / "";
+        }
+#endif
+
+        root_paths.set_pref_path(pref_path);
+        root_paths.set_log_path(base_path);
+        root_paths.set_config_path(base_path);
+        root_paths.set_shared_path(base_path);
+        root_paths.set_cache_path(base_path / "cache" / "");
+        root_paths.set_patch_path(base_path / "patch" / "");
+
+#if defined(__linux__) && !defined(__ANDROID__) && !defined(__APPLE__)
+        // XDG Data Dirs.
+        auto env_home = getenv("HOME");
+        auto XDG_DATA_DIRS = getenv("XDG_DATA_DIRS");
+        auto XDG_DATA_HOME = getenv("XDG_DATA_HOME");
+        auto XDG_CACHE_HOME = getenv("XDG_CACHE_HOME");
+        auto XDG_CONFIG_HOME = getenv("XDG_CONFIG_HOME");
+        auto APPDIR = getenv("APPDIR"); // Used in AppImage
+
+        if (XDG_DATA_HOME != NULL)
+            root_paths.set_pref_path(fs::path(XDG_DATA_HOME) / app_name / app_name / "");
+
+        if (XDG_CONFIG_HOME != NULL)
+            root_paths.set_config_path(fs::path(XDG_CONFIG_HOME) / app_name / "");
+        else if (env_home != NULL)
+            root_paths.set_config_path(fs::path(env_home) / ".config" / app_name / "");
+
+        if (XDG_CACHE_HOME != NULL) {
+            root_paths.set_cache_path(fs::path(XDG_CACHE_HOME) / app_name / "");
+            root_paths.set_log_path(fs::path(XDG_CACHE_HOME) / app_name / "");
+        } else if (env_home != NULL) {
+            root_paths.set_cache_path(fs::path(env_home) / ".cache" / app_name / "");
+            root_paths.set_log_path(fs::path(env_home) / ".cache" / app_name / "");
+        }
+
+        // Don't assume that base_path is portable.
+        if (fs::exists(root_paths.get_base_path() / "data") && fs::exists(root_paths.get_base_path() / "lang") && fs::exists(root_paths.get_base_path() / "shaders-builtin"))
+            root_paths.set_static_assets_path(root_paths.get_base_path());
+        else if (env_home != NULL)
+            root_paths.set_static_assets_path(fs::path(env_home) / ".local/share" / app_name / "");
+
+        if (XDG_DATA_DIRS != NULL) {
+            auto env_paths = string_utils::split_string(XDG_DATA_DIRS, ':');
+            for (auto &i : env_paths) {
+                if (fs::exists(fs::path(i) / app_name)) {
+                    root_paths.set_static_assets_path(fs::path(i) / app_name / "");
+                    break;
+                }
+            }
+        } else if (XDG_DATA_HOME != NULL) {
+            if (fs::exists(fs::path(XDG_DATA_HOME) / app_name / "data") && fs::exists(fs::path(XDG_DATA_HOME) / app_name / "lang") && fs::exists(fs::path(XDG_DATA_HOME) / app_name / "shaders-builtin"))
+                root_paths.set_static_assets_path(fs::path(XDG_DATA_HOME) / app_name / "");
+        }
+
+        if (APPDIR != NULL && fs::exists(fs::path(APPDIR) / "usr/share/Vita3K")) {
+            root_paths.set_static_assets_path(fs::path(APPDIR) / "usr/share/Vita3K");
+        }
+
+        // shared path
+        if (env_home != NULL)
+            root_paths.set_shared_path(fs::path(env_home) / ".local/share" / app_name / "");
+
+        if (XDG_DATA_HOME != NULL) {
+            root_paths.set_shared_path(fs::path(XDG_DATA_HOME) / app_name / "");
+        }
+
+        // patch path should be in shared path
+        root_paths.set_patch_path(root_paths.get_shared_path() / "patch" / "");
+#endif
+    }
+
     // Create default preference and cache path for safety
-    if (!fs::exists(root_paths.get_config_path()))
-        fs::create_directories(root_paths.get_config_path());
-
-    if (!fs::exists(root_paths.get_cache_path()))
-        fs::create_directories(root_paths.get_cache_path());
-
-    if (!fs::exists(fs::path(root_paths.get_log_path()) / "shaderlog"))
-        fs::create_directories(fs::path(root_paths.get_log_path()) / "shaderlog");
-
-    if (!fs::exists(fs::path(root_paths.get_log_path()) / "texturelog"))
-        fs::create_directories(fs::path(root_paths.get_log_path()) / "texturelog");
+    fs::create_directories(root_paths.get_config_path());
+    fs::create_directories(root_paths.get_cache_path());
+    fs::create_directories(root_paths.get_log_path() / "shaderlog");
+    fs::create_directories(root_paths.get_log_path() / "texturelog");
+    fs::create_directories(root_paths.get_patch_path());
 }
 
 bool init(EmuEnvState &state, Config &cfg, const Root &root_paths) {
     state.cfg = std::move(cfg);
 
-    state.base_path = root_paths.get_base_path_string();
-    state.default_path = root_paths.get_pref_path_string();
-    state.log_path = string_utils::utf_to_wide(root_paths.get_log_path_string());
-    state.config_path = string_utils::utf_to_wide(root_paths.get_config_path_string());
-    state.cache_path = string_utils::utf_to_wide(root_paths.get_cache_path_string());
-    state.shared_path = root_paths.get_shared_path_string();
+    state.base_path = root_paths.get_base_path();
+    state.default_path = root_paths.get_pref_path();
+    state.log_path = root_paths.get_log_path();
+    state.config_path = root_paths.get_config_path();
+    state.cache_path = root_paths.get_cache_path();
+    state.shared_path = root_paths.get_shared_path();
     state.static_assets_path = root_paths.get_static_assets_path();
+    state.patch_path = root_paths.get_patch_path();
 
     // If configuration does not provide a preference path, use SDL's default
     if (state.cfg.pref_path == root_paths.get_pref_path() || state.cfg.pref_path.empty())
-        state.pref_path = string_utils::utf_to_wide(root_paths.get_pref_path_string());
+        state.pref_path = root_paths.get_pref_path();
     else {
-        if (state.cfg.pref_path.back() != '/')
-            state.cfg.pref_path += '/';
-        state.pref_path = string_utils::utf_to_wide(state.cfg.pref_path);
+        auto last_char = state.cfg.pref_path.back();
+        if (last_char != fs::path::preferred_separator && last_char != '/')
+            state.cfg.pref_path += fs::path::preferred_separator;
+        state.pref_path = state.cfg.get_pref_path();
     }
 
-    LOG_INFO("Base path: {}", state.base_path.string());
+    LOG_INFO("Base path: {}", state.base_path);
 #if defined(__linux__) && !defined(__ANDROID__) && !defined(__APPLE__)
-    LOG_INFO("Static assets path: {}", state.static_assets_path.string());
-    LOG_INFO("Shared path: {}", state.shared_path.string());
-    LOG_INFO("Log path: {}", state.log_path.string());
-    LOG_INFO("User config path: {}", state.config_path.string());
-    LOG_INFO("User cache path: {}", state.cache_path.string());
+    LOG_INFO("Static assets path: {}", state.static_assets_path);
+    LOG_INFO("Shared path: {}", state.shared_path);
+    LOG_INFO("Log path: {}", state.log_path);
+    LOG_INFO("User config path: {}", state.config_path);
+    LOG_INFO("User cache path: {}", state.cache_path);
 #endif
-    LOG_INFO("User pref path: {}", state.pref_path.string());
+    LOG_INFO("User pref path: {}", state.pref_path);
 
     if (ImGui::GetCurrentContext() == NULL) {
         ImGui::CreateContext();
@@ -253,7 +289,7 @@ bool init(EmuEnvState &state, Config &cfg, const Root &root_paths) {
         break;
 
     default:
-        LOG_ERROR("Unimplemented backend render: {}.", state.cfg.backend_renderer);
+        LOG_ERROR("Unimplemented backend renderer: {}.", state.cfg.backend_renderer);
         break;
     }
 
@@ -261,7 +297,7 @@ bool init(EmuEnvState &state, Config &cfg, const Root &root_paths) {
         state.display.fullscreen = true;
         window_type |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
-#if defined(WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(__linux__)
     const auto isSteamDeck = []() {
 #ifdef __linux__
         std::ifstream file("/etc/os-release");
@@ -292,6 +328,15 @@ bool init(EmuEnvState &state, Config &cfg, const Root &root_paths) {
         return false;
     }
 
+#ifdef _WIN32
+    // Disable round corners for the game window
+    SDL_SysWMinfo wm_info;
+    SDL_VERSION(&wm_info.version);
+    SDL_GetWindowWMInfo(state.window.get(), &wm_info);
+    const auto window_preference = DWMWCP_DONOTROUND;
+    DwmSetWindowAttribute(wm_info.info.win.window, DWMWA_WINDOW_CORNER_PREFERENCE, &window_preference, sizeof(window_preference));
+#endif
+
     // initialize the renderer first because we need to know if we need a page table
     if (!state.cfg.console) {
         if (renderer::init(state.window.get(), state.renderer, state.backend_renderer, state.cfg, root_paths)) {
@@ -307,7 +352,7 @@ bool init(EmuEnvState &state, Config &cfg, const Root &root_paths) {
                 break;
 
             default:
-                error_dialog(fmt::format("Unknown backend render: {}.", state.cfg.backend_renderer));
+                error_dialog(fmt::format("Unknown backend renderer: {}.", state.cfg.backend_renderer));
                 break;
             }
             return false;

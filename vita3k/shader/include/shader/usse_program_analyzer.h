@@ -17,19 +17,17 @@
 
 #pragma once
 
+#include <shader/usse_types.h>
+
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
-#include <queue>
-#include <shader/usse_types.h>
-#include <tuple>
 #include <vector>
 
 using UniformBufferSizes = std::array<std::uint32_t, 15>;
 
-struct SceGxmProgramParameter;
 struct SceGxmProgram;
 enum SceGxmParameterType : uint8_t;
 
@@ -88,6 +86,7 @@ public:
     USSEBaseNode *get_parent() const {
         return parent;
     }
+    virtual ~USSEBaseNode() = default;
 
     std::size_t children_count() const {
         return children.size();
@@ -236,5 +235,5 @@ void get_attribute_informations(const SceGxmProgram &program, AttributeInformati
 // return the max used buffer index + 1
 int get_uniform_buffer_sizes(const SceGxmProgram &program, UniformBufferSizes &sizes);
 
-void analyze(USSEBlockNode &root, USSEOffset end_offset, AnalyzeReadFunction read_func);
+void analyze(USSEBlockNode &root, USSEOffset end_offset, const AnalyzeReadFunction &read_func);
 } // namespace shader::usse

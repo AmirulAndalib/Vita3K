@@ -17,15 +17,11 @@
 
 #include <codec/state.h>
 
-#include <map>
-
 #define DEBUG
 
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libavformat/avio.h>
-#include <libavutil/log.h>
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 

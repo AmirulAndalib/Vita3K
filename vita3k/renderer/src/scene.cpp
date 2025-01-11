@@ -28,7 +28,6 @@
 #include <renderer/vulkan/functions.h>
 
 #include <config/state.h>
-#include <renderer/functions.h>
 #include <util/log.h>
 #include <util/tracy.h>
 
@@ -55,8 +54,7 @@ COMMAND(handle_set_context) {
         render_context->record.color_surface.downscale = false;
     }
 
-    if (color_surface)
-        delete color_surface;
+    delete color_surface;
 
     if (depth_stencil_surface && !depth_stencil_surface->disabled()) {
         render_context->record.depth_stencil_surface = *depth_stencil_surface;
@@ -65,8 +63,7 @@ COMMAND(handle_set_context) {
         render_context->record.depth_stencil_surface.stencil_data.reset();
     }
 
-    if (depth_stencil_surface)
-        delete depth_stencil_surface;
+    delete depth_stencil_surface;
 
     switch (renderer.current_backend) {
     case Backend::OpenGL:
@@ -131,6 +128,10 @@ COMMAND(handle_sync_surface_data) {
             return;
         }
     }
+
+    // additional check to make sure we never try to perform surface sync on OpenGL with a non-integer resolution multiplier
+    if (renderer.current_backend == Backend::OpenGL && static_cast<int>(renderer.res_multiplier * 4.0f) % 4 != 0)
+        renderer.disable_surface_sync = true;
 
     if (renderer.disable_surface_sync || renderer.current_backend == Backend::Vulkan) {
         if (helper.cmd->status) {
@@ -203,7 +204,7 @@ COMMAND(handle_mid_scene_flush) {
 
     if (!renderer.features.support_memory_mapping) {
         // handle it like a simple notification
-        cmd_handle_notification(renderer, mem, config, helper, features, render_context, cache_path, title_id, self_name);
+        cmd_handle_notification(renderer, mem, config, helper, features, render_context);
         return;
     }
 
@@ -217,18 +218,18 @@ COMMAND(handle_draw) {
     TRACY_FUNC_COMMANDS(handle_draw);
     SceGxmPrimitiveType type = helper.pop<SceGxmPrimitiveType>();
     SceGxmIndexFormat format = helper.pop<SceGxmIndexFormat>();
-    Ptr<const void> indicies = helper.pop<Ptr<const void>>();
+    Ptr<const void> indices = helper.pop<Ptr<const void>>();
     const std::uint32_t count = helper.pop<const std::uint32_t>();
     const std::uint32_t instance_count = helper.pop<const std::uint32_t>();
 
     switch (renderer.current_backend) {
     case Backend::OpenGL:
         gl::draw(dynamic_cast<gl::GLState &>(renderer), *reinterpret_cast<gl::GLContext *>(render_context),
-            features, type, format, indicies.cast<void>().get(mem), count, instance_count, mem, cache_path, title_id, self_name, config);
+            features, type, format, indices.cast<void>().get(mem), count, instance_count, mem, config);
         break;
 
     case Backend::Vulkan:
-        vulkan::draw(*reinterpret_cast<vulkan::VKContext *>(render_context), type, format, indicies.cast<void>(),
+        vulkan::draw(*reinterpret_cast<vulkan::VKContext *>(render_context), type, format, indices.cast<void>(),
             count, instance_count, mem, config);
         break;
 

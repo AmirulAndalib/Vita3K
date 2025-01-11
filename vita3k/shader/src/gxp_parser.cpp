@@ -17,9 +17,13 @@
 
 #include <gxm/functions.h>
 #include <shader/gxp_parser.h>
-#include <shader/usse_program_analyzer.h>
+#include <shader/usse_types.h>
 #include <util/align.h>
 #include <util/log.h>
+
+#include <algorithm>
+#include <map>
+#include <tuple>
 
 namespace shader {
 
@@ -76,7 +80,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
     ProgramInput program_input;
     std::map<int, UniformBuffer> uniform_buffers;
 
-    // TODO split these to functions (e.g. get_literals, get_paramters)
+    // TODO split these to functions (e.g. get_literals, get_parameters)
     auto gxp_parameters = program.program_parameters();
     auto vertex_varyings_ptr = program.vertex_varyings();
 
@@ -155,7 +159,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
                     buffer.size = std::max(parameter.resource_index + parameter_size_in_f32, buffer.size);
 
                     if (!container) {
-                        buffer.reg_start_offset = std::min(buffer.reg_start_offset, static_cast<uint32_t>(offset));
+                        buffer.reg_start_offset = std::min(buffer.reg_start_offset, offset);
                     }
                 }
 

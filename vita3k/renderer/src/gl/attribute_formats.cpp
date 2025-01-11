@@ -15,7 +15,8 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <renderer/gl/functions.h>
+#include <glutil/gl.h>
+#include <gxm/types.h>
 #include <renderer/profile.h>
 
 #include <util/log.h>
@@ -50,7 +51,7 @@ GLenum attribute_format_to_gl_type(SceGxmAttributeFormat format) {
     return GL_UNSIGNED_BYTE;
 }
 
-GLboolean attribute_format_normalised(SceGxmAttributeFormat format) {
+GLboolean attribute_format_normalized(SceGxmAttributeFormat format) {
     R_PROFILE(__func__);
 
     switch (format) {

@@ -17,14 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
 #include <functional>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
-
-struct CPUState;
-struct MemState;
 
 typedef uint32_t Address;
 typedef std::function<bool(Address, bool)> ProtectCallback;

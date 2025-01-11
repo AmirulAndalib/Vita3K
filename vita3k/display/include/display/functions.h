@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <cstdint>
 #include <kernel/thread/thread_state.h>
-#include <util/types.h>
+
+#include <cstdint>
 
 struct DisplayState;
 struct KernelState;

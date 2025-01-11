@@ -55,8 +55,6 @@
 		<license>ライセンス</license>
 		<shaders_cache>シェーダーキャッシュ</shaders_cache>
 		<shaders_log>シェーダーログ</shaders_log>
-		<export_textures>出力テクスチャ</export_textures>
-		<import_textures>入力テクスチャ</import_textures>
 		<manual>マニュアル</manual>
 		<update>アップデート</update>
 		<update_history>アップデート履歴</update_history>
@@ -98,6 +96,7 @@
 		<an_error_occurred>エラーが起きました。
 エラーコード：{}</an_error_occurred>
 		<cancel>キャンセル</cancel>
+		<close>閉じる</close>
 		<delete>削除</delete>
 		<file_corrupted>ファイルが壊れています。</file_corrupted>
 		<microphone_disabled>マイクを有効にしてください。</microphone_disabled>
@@ -592,6 +591,12 @@ GUIでのアジア地域のフォントサポートに必須です。
 一部の有益な拡張が無効になり、すべてのGPUがこれに対応しているわけではありません。</spirv_shader_description>
 			<clean_shaders>シェーダーキャッシュとログのクリア</clean_shaders>
 		</gpu>
+		<audio name="オーディオ">
+			<audio_backend>オーディオバックエンド</audio_backend>
+			<select_audio_backend>お好みのオーディオバックエンドを選択してください。</select_audio_backend>
+			<enable_ngs_support>NGSサポートを有効にする</enable_ngs_support>
+			<ngs_description>NGSオーディオライブラリのサポートを無効にするには、チェックボックスを外します。</ngs_description>
+		</audio>
 		<system name="システム">
 			<select_enter_button>決定ボタンの割り当て
 「決定」ボタンを選択してください。</select_enter_button>
@@ -608,10 +613,6 @@ GUIでのアジア地域のフォントサポートに必須です。
 		</system>
 		<emulator name="エミュレータ">
 			<boot_apps_full_screen>アプリをフルスクリーンで起動</boot_apps_full_screen>
-			<audio_backend>オーディオバックエンド</audio_backend>
-			<select_audio_backend>お好みのオーディオバックエンドを選択してください。</select_audio_backend>
-			<enable_ngs_support>NGSサポートを有効にする</enable_ngs_support>
-			<ngs_description>NGSオーディオライブラリのサポートを無効にするには、チェックボックスを外します。</ngs_description>
 			<log_level>ログレベル</log_level>
 			<select_log_level>お好みのログレベルを選択してください。</select_log_level>
 			<archive_log>ログのアーカイブ</archive_log>
@@ -705,7 +706,6 @@ GUIでのアジア地域のフォントサポートに必須です。
 			<read_end_sleep_description>データを読み取る際のスリープ試行時間。
 低い値はパフォーマンスを向上させる一方で、インターネットが非常に悪い場合はゲームを不安定にする可能性があります。</read_end_sleep_description>
 		</network>
-		<close>閉じる</close>
 		<save_reboot>保存して再起動</save_reboot>
 		<save_apply>保存して適用</save_apply>
 		<save>セーブ</save>
@@ -717,6 +717,8 @@ GUIでのアジア地域のフォントサポートに必須です。
 		<internet_browser>インターネットブラウザー</internet_browser>
 		<trophies>トロフィー</trophies>
 		<trophy_collection>トロフィーコレクション</trophy_collection>
+		<settings>設定</settings>
+		<content_manager>コンテンツ管理</content_manager>
 	</sys_apps_title>
 
 	<trophy_collection>
@@ -760,7 +762,8 @@ GUIでのアジア地域のフォントサポートに必須です。
 	<vita3k_update name="Vita3Kのアップデート">
  		<new_version_available>新しいバージョンのVita3Kがあります。</new_version_available>
 		<back>戻る</back>
-		<cancel_update>アップデートをキャンセルしますか？</cancel_update>
+		<cancel_update_resume>アップデートをキャンセルしますか？
+キャンセルした場合、Vita3Kは次回のアップデートでこの時点のダウンロードを再開します。</cancel_update_resume>
 		<downloading>ダウンロード中...
 ダウンロードが完了すると、Vita3Kが自動的に再起動し、新しいアップデートがインストールされます。</downloading>
 		<not_complete_update>アップデートできませんでした。</not_complete_update>
@@ -793,6 +796,5 @@ GUIでのアジア地域のフォントサポートに必須です。
 		<discord_help>その他の相談は、#help チャンネルで行うことができます。</discord_help>
 		<no_piracy>Vita3Kは著作権侵害を認めません。所有ゲームの吸出しを行ってください。</no_piracy>
 		<show_next_time>次回以降も表示</show_next_time>
-		<close>閉じる</close>
 	</welcome>
 </lang>

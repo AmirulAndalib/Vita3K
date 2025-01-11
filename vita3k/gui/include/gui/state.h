@@ -19,8 +19,6 @@
 
 #include <compat/state.h>
 #include <config/config.h>
-#include <dialog/state.h>
-#include <ime/state.h>
 #include <lang/state.h>
 #include <np/state.h>
 
@@ -29,12 +27,9 @@
 
 #include <gui/imgui_impl_sdl_state.h>
 
-#include <glutil/object.h>
-
 #include <atomic>
 #include <mutex>
 #include <optional>
-#include <queue>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -213,31 +208,11 @@ enum NoticeIcon {
     NEW
 };
 
-enum ModulesModeType {
-    MODE,
-    DESCRIPTION,
-};
-
 enum ThemePreviewType {
     PACKAGE,
     HOME,
     LOCK,
 };
-
-static constexpr auto MODULES_MODE_COUNT = 3;
-using ConfigModuleMode = std::array<std::vector<const char *>, MODULES_MODE_COUNT>;
-
-inline ConfigModuleMode init_modules_mode() {
-    ConfigModuleMode m;
-
-    m[ModulesMode::AUTOMATIC] = { "Automatic", "Select Automatic mode to use a preset list of modules." };
-    m[ModulesMode::AUTO_MANUAL] = { "Auto & Manual", "Select this mode to load Automatic module and selected modules from the list below." };
-    m[ModulesMode::MANUAL] = { "Manual", "Select Manual mode to load selected modules from the list below." };
-
-    return m;
-}
-
-const ConfigModuleMode config_modules_mode = init_modules_mode();
 
 inline const std::vector<std::pair<SceSystemParamLang, std::string>> LIST_SYS_LANG = {
     { SCE_SYSTEM_PARAM_LANG_DANISH, "Dansk" },
@@ -309,8 +284,6 @@ struct GuiState {
 
     std::vector<std::pair<std::string, bool>> modules;
     ImGuiTextFilter module_search_bar;
-
-    GLuint display = 0;
 
     ImGuiTextFilter app_search_bar;
 

@@ -18,6 +18,8 @@
 #pragma once
 
 #include <kernel/thread/thread_state.h>
+
+#include <algorithm>
 #include <list>
 #include <set>
 
@@ -188,7 +190,7 @@ private:
 template <typename T>
 class PriorityThreadDataQueueInteratorBase : public ThreadDataQueueInteratorBase<T> {
 public:
-    PriorityThreadDataQueueInteratorBase(typename std::multiset<T, std::greater<T>>::iterator it)
+    PriorityThreadDataQueueInteratorBase(typename std::multiset<T, std::greater<>>::iterator it)
         : it(it) {
     }
 
@@ -261,7 +263,7 @@ public:
     }
 
 private:
-    ThreadDataQueueInterator<T> make_iterator(typename std::multiset<T, std::greater<T>>::iterator it) {
+    ThreadDataQueueInterator<T> make_iterator(typename std::multiset<T, std::greater<>>::iterator it) {
         auto base = new PriorityThreadDataQueueInteratorBase<T>(it);
         return ThreadDataQueueInterator<T>(base);
     }
