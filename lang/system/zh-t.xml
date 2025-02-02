@@ -22,7 +22,7 @@
 			<condition_variables>條件變量</condition_variables>
 			<lightweight_condition_variables>輕量條件變量</lightweight_condition_variables>
 			<event_flags>事件標志</event_flags>
-			<memory_allocations>内存分配</memory_allocations>
+			<memory_allocations>內存分配</memory_allocations>
 			<disassembly>反匯編</disassembly>
 		</debug>
 		<configuration name="組態">
@@ -44,7 +44,7 @@
 		<vita3k_website>更多資訊請造訪我們的網站：</vita3k_website>
 		<ko-fi_website>如果您想支持我們，您可以捐贈或者訂閱我們的：</ko-fi_website>
 		<vita3k_staff>Vita3K人員名單</vita3k_staff>
-		<developers>開發人員</developers>
+		<developers>開發者</developers>
 		<contributors>參與者</contributors>
 		<supporters>支持者</supporters>
 	</about>
@@ -67,8 +67,6 @@
 		<license>授權</license>
 		<shaders_cache>著色器快取</shaders_cache>
 		<shaders_log>著色器記錄</shaders_log>
-		<export_textures>導出紋理</export_textures>
-		<import_textures>導入紋理</import_textures>
 		<manual>說明書</manual>
 		<update>更新</update>
 		<update_history>更新履歷</update_history>
@@ -110,6 +108,7 @@
 		<an_error_occurred>發生錯誤。
 錯誤編號：{}</an_error_occurred>
 		<cancel>取消</cancel>
+		<close>關閉</close>
 		<delete>刪除</delete>
 		<file_corrupted>檔案已毀損。</file_corrupted>
 		<microphone_disabled>請啟用麥克風。</microphone_disabled>
@@ -337,6 +336,7 @@
 		<toggle_gui_visibility_description>在應用程式運行时，在螢幕頂部顯示和隱藏圖形化使用者介面之間切換。</toggle_gui_visibility_description>
 		<miscellaneous>雜項</miscellaneous>
 		<toggle_texture_replacement>切換紋理替換</toggle_texture_replacement>
+		<take_a_screenshot>截圖</take_a_screenshot>
 		<error>錯誤</error>
 		<error_duplicate_key>此按鈕已繫結至其他按鈕或已被保留。</error_duplicate_key>
 	</controls>
@@ -516,6 +516,14 @@
 		</help>
 	</live_area>
 
+	<message>
+		<load_app_failed>無法讀取“{}”，
+請檢查vita3k.log查閲控制臺輸出的詳細資訊。
+1、您是否已安裝了韌體？
+2、傾印您已擁有的应用程式/遊戲，並在Vita3K安裝。
+3、如果您想要安裝/運行Vitamin是不支援的。</load_app_failed>
+	</message>
+
 	<performance_overlay>
 		<avg>平均</avg>
 		<min>最低</min>
@@ -646,7 +654,19 @@
 請注意，一些有益的擴展功能將被禁用，
 並非所有顯卡都與此兼容。</spirv_shader_description>
 			<clean_shaders>清除著色器快取以及記錄</clean_shaders>
+			<fps_hack>FPS修改</fps_hack>
+			<fps_hack_description>遊戲修改允許一些以30FPS運行的遊戲在模擬器上以60FPS的速度運行。
+請注意這只是一個修改，僅適用於某些遊戲。
+在其他遊戲中，它可能沒有效果或使其出現兩倍速。</fps_hack_description>
 		</gpu>
+		<audio name="音频">
+			<audio_backend>音頻後端</audio_backend>
+			<select_audio_backend>選擇您喜歡的音頻後端。</select_audio_backend>
+			<audio_volume>音頻音量</audio_volume>
+			<audio_volume_description>調整全局音頻輸出的音量百分比。</audio_volume_description>
+			<enable_ngs_support>啟用NGS支持</enable_ngs_support>
+			<ngs_description>取消勾選此項禁用對高級音頻庫NGS的支持。</ngs_description>
+		</audio>
 		<system name="系統">
 			<select_enter_button>確認按鈕分配
 請選擇您的“確認”按鈕。</select_enter_button>
@@ -663,10 +683,6 @@
 		</system>
 		<emulator name="模擬器">
 			<boot_apps_full_screen>以全螢幕啟動應用程式</boot_apps_full_screen>
-			<audio_backend>音頻後端</audio_backend>
-			<select_audio_backend>選擇您喜歡的音頻後端。</select_audio_backend>
-			<enable_ngs_support>啟用NGS支持</enable_ngs_support>
-			<ngs_description>取消勾選此項禁用對高級音頻庫NGS的支持。</ngs_description>
 			<trace>追蹤</trace>
 			<info>資訊</info>
 			<warning>警告</warning>
@@ -801,7 +817,6 @@
 			<unwatch_import_calls>取消監視導入調用</unwatch_import_calls>
 			<watch_import_calls>監視導入調用</watch_import_calls>
 		</debug>
-		<close>關閉</close>
 		<save_reboot>保存並重啟</save_reboot>
 		<save_apply>保存並應用</save_apply>
 		<save>保存</save>
@@ -813,6 +828,8 @@
 		<internet_browser>網路瀏覽器</internet_browser>
 		<trophies>獎盃</trophies>
 		<trophy_collection>獎盃收藏</trophy_collection>
+		<settings>設定</settings>
+		<content_manager>內容管理</content_manager>
 	</sys_apps_title>
 
 	<trophy_collection>
@@ -857,7 +874,8 @@
 	<vita3k_update name="Vita3K更新">
  		<new_version_available>發現新版的Vita3K。</new_version_available>
 		<back>返回</back>
- 		<cancel_update>確定要取消更新嗎？</cancel_update>
+ 		<cancel_update_resume>確定要取消更新嗎？
+選擇取消後，下次會從中斷處開始下載。</cancel_update_resume>
 		<downloading>下載中…
 下載完成后，Vita3K會自動重新啟動，並安裝新的更新。</downloading>
 		<not_complete_update>無法更新。</not_complete_update>
@@ -890,6 +908,5 @@
 		<discord_help>可以在#help頻道中取得額外支援</discord_help>
 		<no_piracy>Vita3K不縱容盜版，您必須傾印您自己擁有的遊戲。</no_piracy>
 		<show_next_time>下次顯示</show_next_time>
-		<close>關閉</close>
 	</welcome>
 </lang>

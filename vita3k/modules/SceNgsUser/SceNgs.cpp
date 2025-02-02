@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2024 Vita3K team
+// Copyright (C) 2025 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -137,8 +137,6 @@ EXPORT(int, sceNgsAT9GetSectionDetails, uint32_t samples_start, const uint32_t n
         const int nb_samples_per_superframe = nb_samples_per_frame * 4;
 
         samples_start += nb_samples_per_frame;
-        if (is_sdk_recent)
-            samples_start += nb_samples_per_frame;
 
         const int superframes_offset = samples_start / nb_samples_per_superframe;
 
@@ -147,7 +145,7 @@ EXPORT(int, sceNgsAT9GetSectionDetails, uint32_t samples_start, const uint32_t n
         const int start_skip_samples = samples_start - superframes_offset * nb_samples_per_superframe;
         info->start_skip = static_cast<SceInt16>(start_skip_samples);
 
-        const int total_superframes = (start_skip_samples + num_samples + nb_samples_per_superframe - 1) / nb_samples_per_superframe;
+        const int total_superframes = (samples_start + num_samples + nb_samples_per_superframe - 1) / nb_samples_per_superframe;
         const int total_bytes_read = (total_superframes - superframes_offset) * superframe_bytes;
         info->num_bytes = total_bytes_read;
 
@@ -258,15 +256,17 @@ EXPORT(int, sceNgsPatchRemoveRouting, Ptr<ngs::Patch> patch) {
 
 EXPORT(int, sceNgsRackGetRequiredMemorySize, ngs::System *system, SceNgsRackDescription *description, uint32_t *size) {
     TRACY_FUNC(sceNgsRackGetRequiredMemorySize, system, description, size);
-    if (!emuenv.cfg.current_config.ngs_enable) {
-        *size = 1;
-        return 0;
-    }
     if (!system) {
         return RET_ERROR(SCE_NGS_ERROR_INVALID_HANDLE);
     }
     if (!description || !description->definition || !size)
         return RET_ERROR(SCE_NGS_ERROR_INVALID_ARG);
+
+    if (!emuenv.cfg.current_config.ngs_enable) {
+        *size = 1;
+        return 0;
+    }
+
     auto definition = description->definition.get(emuenv.mem);
     if (definition->output_count == 0 || definition->type >= ngs::BussType::BUSS_MAX)
         return RET_ERROR(SCE_NGS_ERROR_INVALID_ARG);
@@ -353,14 +353,12 @@ EXPORT(int, sceNgsRackSetParamErrorCallback) {
 
 EXPORT(int, sceNgsSystemGetRequiredMemorySize, SceNgsSystemInitParams *params, uint32_t *size) {
     TRACY_FUNC(sceNgsSystemGetRequiredMemorySize, params, size);
+    if (!params || !size)
+        return RET_ERROR(SCE_NGS_ERROR_INVALID_ARG);
     if (!emuenv.cfg.current_config.ngs_enable) {
         *size = 1;
         return 0;
     }
-
-    if (!params || !size)
-        return RET_ERROR(SCE_NGS_ERROR_INVALID_ARG);
-
     *size = ngs::System::get_required_memspace_size(params); // System struct size
     return 0;
 }

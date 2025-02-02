@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2024 Vita3K team
+// Copyright (C) 2025 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,8 +26,8 @@
 #include <vulkan/vulkan_format_traits.hpp>
 
 #include <util/align.h>
-#include <util/keywords.h>
 #include <util/log.h>
+#include <util/vector_utils.h>
 
 extern "C" {
 #include <libswscale/swscale.h>
@@ -58,8 +58,6 @@ static bool format_need_additional_memory(SceGxmColorBaseFormat format) {
 }
 
 namespace renderer::vulkan {
-
-static constexpr std::uint64_t CASTED_UNUSED_TEXTURE_PURGE_SECS = 40;
 
 ColorSurfaceCacheInfo::~ColorSurfaceCacheInfo() {
     sws_freeContext(sws_context);
@@ -124,8 +122,8 @@ SurfaceRetrieveResult VKSurfaceCache::retrieve_color_surface_for_framebuffer(Mem
     const uint32_t original_width = color->width;
     const uint32_t original_height = color->height;
 
-    uint32_t width = original_width * state.res_multiplier;
-    uint32_t height = original_height * state.res_multiplier;
+    uint32_t width = static_cast<uint32_t>(original_width * state.res_multiplier);
+    uint32_t height = static_cast<uint32_t>(original_height * state.res_multiplier);
 
     bool overlap = true;
 
@@ -135,8 +133,8 @@ SurfaceRetrieveResult VKSurfaceCache::retrieve_color_surface_for_framebuffer(Mem
         // no match
         overlap = false;
     else
-        ite--;
-    // ite is now the first item with an adress lower or equal to key
+        --ite;
+    // ite is now the first item with an address lower or equal to key
 
     overlap = (overlap && (ite->first + ite->second->total_bytes) > address);
 
@@ -171,7 +169,7 @@ SurfaceRetrieveResult VKSurfaceCache::retrieve_color_surface_for_framebuffer(Mem
         // There are four situations I think of:
         // 1. Different base address, lookup for write, in this case, if the cached surface range contains the given address, then
         // probably this cached surface has already been freed GPU-wise. So erase.
-        // 2. Same base address, but width and height change to be larger, or format change if write. Remake a new one for both read and write sitatation.
+        // 2. Same base address, but width and height change to be larger, or format change if write. Remake a new one for both read and write situation.
         // 3. Out of cache range. In write case, create a new one, in read case, lul
         // 4. Read situation with smaller width and height, probably need to extract the needed region out.
         // 5. the surface is a gbuffer and we are currently trying to read the 2nd component, in this case key == ite->first + 4
@@ -282,7 +280,7 @@ SurfaceRetrieveResult VKSurfaceCache::retrieve_color_surface_for_framebuffer(Mem
 
     // we only support surface sync of linear surfaces for now
     if (!can_mprotect_mapped_memory) {
-        // peform surface sync on everything
+        // perform surface sync on everything
         // it is slow but well... we can't mprotect the buffer
         *info_added.need_surface_sync = color->surfaceType == SCE_GXM_COLOR_SURFACE_LINEAR;
     } else if (color->surfaceType == SCE_GXM_COLOR_SURFACE_LINEAR && format_support_surface_sync(base_format)) {
@@ -312,8 +310,8 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
     const uint32_t original_width = gxm::get_width(texture);
     const uint32_t original_height = gxm::get_height(texture);
 
-    const uint32_t width = original_width * state.res_multiplier;
-    const uint32_t height = original_height * state.res_multiplier;
+    const uint32_t width = static_cast<uint32_t>(original_width * state.res_multiplier);
+    const uint32_t height = static_cast<uint32_t>(original_height * state.res_multiplier);
 
     bool overlap = true;
     // Of course, this works under the assumption that range must be unique :D
@@ -322,9 +320,8 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
         // no match
         overlap = false;
     else
-        ite--;
-    // ite is now the first item with an adress lower or equal to key
-    bool invalidated = false;
+        --ite;
+    // ite is now the first item with an address lower or equal to key
 
     overlap = (overlap && (ite->first + ite->second->total_bytes) > address);
 
@@ -385,7 +382,6 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
 
     // Check if we can use this surface
     bool addr_in_range_of_cache = ((address + total_surface_size) <= (ite->first + info.total_bytes + 4));
-    const bool surface_extent_changed = (info.height < height);
 
     if (ite->first != address && !addr_in_range_of_cache)
         // persona 4 sample from the top of a texture while the bottom wasn't rendered to, the fact that both the surface and
@@ -401,8 +397,8 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
     // TODO: this is true only for linear textures (and also kind of for tiled textures) (and in this case start_x = 0),
     // for swizzled textures this is different
     const uint32_t data_delta = address - ite->first;
-    uint32_t start_sourced_line = (data_delta / stride_bytes) * state.res_multiplier;
-    uint32_t start_x = (data_delta % stride_bytes) / bytes_per_pixel_requested * state.res_multiplier;
+    uint32_t start_sourced_line = static_cast<uint32_t>((data_delta / stride_bytes) * state.res_multiplier);
+    uint32_t start_x = static_cast<uint32_t>((data_delta % stride_bytes) / bytes_per_pixel_requested * state.res_multiplier);
 
     if (static_cast<uint16_t>(start_sourced_line + height) > info.height)
         LOG_WARN_ONCE("Trying to use texture partially in the surface cache");
@@ -534,7 +530,7 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
         } else {
             LOG_INFO_ONCE("Game is doing typeless copies");
             // We must use a transition buffer
-            vk::DeviceSize buffer_size = stride_bytes * state.res_multiplier * height + start_x * bytes_per_pixel_requested;
+            vk::DeviceSize buffer_size = stride_bytes * static_cast<size_t>(state.res_multiplier * align(height, 4)) + start_x * bytes_per_pixel_requested;
             if (!casted->transition_buffer.buffer || casted->transition_buffer.size < buffer_size) {
                 // create or re-create the buffer
                 state.frame().destroy_queue.add_buffer(casted->transition_buffer);
@@ -543,7 +539,7 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
             }
 
             // copy the image to the buffer
-            const uint32_t src_pixel_stride = (info.stride_bytes / bytes_per_pixel_in_store) * state.res_multiplier;
+            const uint32_t src_pixel_stride = static_cast<uint32_t>((info.stride_bytes / bytes_per_pixel_in_store) * state.res_multiplier);
             vk::BufferImageCopy copy_image_buffer{
                 .bufferOffset = 0,
                 .bufferRowLength = src_pixel_stride,
@@ -574,9 +570,6 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
         };
     } else {
         // the renderpass external dependencies should take care of the barrier
-        VKContext *context = reinterpret_cast<VKContext *>(state.context);
-        vk::CommandBuffer cmd_buffer = context->prerender_cmd;
-
         if (swizzle == info.swizzle && vk_format == info.texture.format)
             // we can use the same texture view
             return TextureLookupResult{
@@ -608,16 +601,16 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_color_surface_as_tex
 
 SurfaceRetrieveResult VKSurfaceCache::retrieve_depth_stencil_for_framebuffer(SceGxmDepthStencilSurface *depth_stencil, const uint32_t width, const uint32_t height) {
     // when writing we use the render target size which is already upscaled
-    int32_t memory_width = width / state.res_multiplier;
-    int32_t memory_height = height / state.res_multiplier;
+    int32_t memory_width = static_cast<int32_t>(width / state.res_multiplier);
+    int32_t memory_height = static_cast<int32_t>(height / state.res_multiplier);
 
     const SurfaceTiling tiling = (depth_stencil->get_type() == SCE_GXM_DEPTH_STENCIL_SURFACE_LINEAR) ? SurfaceTiling::Linear : SurfaceTiling::Tiled;
 
     // check if MSAA is used, the depth buffer is never downscaled
     if (target->multisample_mode != SCE_GXM_MULTISAMPLE_NONE)
-        memory_width *= 2;
-    if (target->multisample_mode == SCE_GXM_MULTISAMPLE_4X)
         memory_height *= 2;
+    if (target->multisample_mode == SCE_GXM_MULTISAMPLE_4X)
+        memory_width *= 2;
 
     const bool is_stencil_only = depth_stencil->depth_data.address() == 0;
     DepthStencilSurfaceCacheInfo *cached_info = nullptr;
@@ -673,6 +666,20 @@ SurfaceRetrieveResult VKSurfaceCache::retrieve_depth_stencil_for_framebuffer(Sce
     cached_info->stride_samples = depth_stencil->get_stride();
     cached_info->tiling = tiling;
 
+    uint32_t bytes_per_sample;
+    switch (depth_stencil->get_format()) {
+    case SCE_GXM_DEPTH_STENCIL_FORMAT_S8:
+        bytes_per_sample = 1;
+        break;
+    case SCE_GXM_DEPTH_STENCIL_FORMAT_D16:
+        bytes_per_sample = 2;
+        break;
+    default:
+        bytes_per_sample = 4;
+        break;
+    }
+    cached_info->total_bytes = bytes_per_sample * depth_stencil->get_stride() * memory_height;
+
     vkutil::Image &image = cached_info->texture;
 
     // use prerender cmd in case we read from the depth buffer (although I really doubt this could happen)
@@ -691,7 +698,7 @@ SurfaceRetrieveResult VKSurfaceCache::retrieve_depth_stencil_for_framebuffer(Sce
         .stencil = 0
     };
     cmd_buffer.clearDepthStencilImage(image.image, vk::ImageLayout::eTransferDstOptimal, clear_value, vkutil::ds_subresource_range);
-    image.transition_to(cmd_buffer, vkutil::ImageLayout::DepthReadOnly, vkutil::ds_subresource_range);
+    image.transition_to(cmd_buffer, vkutil::ImageLayout::DepthStencilReadOnly, vkutil::ds_subresource_range);
 
     return {
         image.view,
@@ -703,13 +710,18 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
     SceGxmTextureBaseFormat base_format = gxm::get_base_format(gxm::get_format(texture));
     bool can_be_depth = false;
     bool can_be_stencil = false;
+
+    uint32_t bytes_per_sample = 4;
     switch (base_format) {
         // 8bit stencil
     case SCE_GXM_TEXTURE_BASE_FORMAT_U8:
     case SCE_GXM_TEXTURE_BASE_FORMAT_S8:
+        bytes_per_sample = 1;
         can_be_stencil = true;
         break;
     case SCE_GXM_TEXTURE_BASE_FORMAT_U16:
+        bytes_per_sample = 2;
+        [[fallthrough]];
     case SCE_GXM_TEXTURE_BASE_FORMAT_X8U24:
     case SCE_GXM_TEXTURE_BASE_FORMAT_F32:
     case SCE_GXM_TEXTURE_BASE_FORMAT_F32M:
@@ -747,21 +759,43 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
         return std::nullopt;
 
     // take upscaling into account
-    uint32_t width = memory_width * state.res_multiplier;
-    uint32_t height = memory_height * state.res_multiplier;
+    uint32_t width = static_cast<uint32_t>(memory_width * state.res_multiplier);
+    uint32_t height = static_cast<uint32_t>(memory_height * state.res_multiplier);
+    uint32_t total_bytes = bytes_per_sample * stride_samples * memory_height;
 
     const uint32_t address = texture.data_addr << 2;
+    uint32_t surface_address = 0;
     DepthStencilSurfaceCacheInfo *found_info = nullptr;
 
     if (can_be_depth) {
-        auto it = depth_address_lookup.find(address);
-        if (it != depth_address_lookup.end())
-            found_info = it->second;
+        // get the first depth surface with an address lower or equal to address
+        auto it = depth_address_lookup.upper_bound(address);
+        if (it != depth_address_lookup.begin()) {
+            it--;
+
+            // the texture must be contained entirely in the depth surface
+            if (address + total_bytes <= it->first + it->second->total_bytes) {
+                surface_address = it->first;
+                found_info = it->second;
+            }
+        }
     }
     if (!found_info && can_be_stencil) {
-        auto it = stencil_address_lookup.find(address);
-        if (it != stencil_address_lookup.end())
-            found_info = it->second;
+        // get the first stencil surface with an address lower or equal to address
+        auto it = stencil_address_lookup.upper_bound(address);
+        if (it != stencil_address_lookup.begin()) {
+            it--;
+
+            // note: we don't support sampling the stencil from a D24S8 depth-stencil
+            // so we can assume any stencil uses only 1 byte per sample
+            uint32_t surface_bytes = it->second->stride_samples * it->second->memory_height * 1;
+
+            // the texture must be contained entirely in the stencil surface
+            if (address + total_bytes <= it->first + surface_bytes) {
+                surface_address = it->first;
+                found_info = it->second;
+            }
+        }
     }
 
     if (found_info == nullptr)
@@ -776,15 +810,22 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
 
     // take MSAA into account
     if (cached_info.multisample_mode != SCE_GXM_MULTISAMPLE_NONE)
-        width /= 2;
-    if (cached_info.multisample_mode == SCE_GXM_MULTISAMPLE_4X)
         height /= 2;
+    if (cached_info.multisample_mode == SCE_GXM_MULTISAMPLE_4X)
+        width /= 2;
 
-    const bool is_stencil = cached_info.surface.stencil_data.address() == address;
+    const bool is_stencil = can_be_stencil;
+
+    const uint32_t delta_samples = (address - surface_address) / bytes_per_sample;
+    uint32_t delta_col_samples = delta_samples % stride_samples;
+    uint32_t delta_row_samples = delta_samples / stride_samples;
 
     vk::ImageView ds_attachment = reinterpret_cast<VKContext *>(state.context)->current_ds_view;
     const bool reading_ds_attachment = cached_info.texture.view == ds_attachment;
-    const bool same_dimension = (memory_width == cached_info.memory_width) && (memory_height == cached_info.memory_height);
+    const bool same_dimension = memory_width == cached_info.memory_width
+        && memory_height == cached_info.memory_height
+        && delta_col_samples == 0
+        && delta_row_samples == 0;
 
     if (!reading_ds_attachment && (state.features.use_texture_viewport || same_dimension)) {
         // we can just sample from the surface itself
@@ -804,15 +845,22 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
             img_view = state.device.createImageView(view_info);
         }
 
-        if (state.features.use_texture_viewport)
-            texture_viewport->ratio = {
-                memory_width / static_cast<float>(cached_info.memory_width),
-                memory_height / static_cast<float>(cached_info.memory_height)
+        const float inv_surface_width = 1 / static_cast<float>(cached_info.memory_width);
+        const float inv_surface_height = 1 / static_cast<float>(cached_info.memory_height);
+        if (state.features.use_texture_viewport) {
+            texture_viewport->offset = {
+                delta_col_samples * inv_surface_width,
+                delta_row_samples * inv_surface_height
             };
+            texture_viewport->ratio = {
+                memory_width * inv_surface_width,
+                memory_height * inv_surface_height
+            };
+        }
 
         return TextureLookupResult{
             img_view,
-            vkutil::ImageLayout::DepthReadOnly,
+            vkutil::ImageLayout::DepthStencilReadOnly,
             vk::Format::eD32SfloatS8Uint
         };
     }
@@ -821,8 +869,11 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
 
     int read_surface_idx = -1;
     for (int i = 0; i < cached_info.read_surfaces.size(); i++) {
-        if (cached_info.read_surfaces[i].depth_view.width == width
-            && cached_info.read_surfaces[i].depth_view.height == height) {
+        auto &read_surface = cached_info.read_surfaces[i];
+        if (read_surface.depth_view.width == width
+            && read_surface.depth_view.height == height
+            && read_surface.delta_row == delta_row_samples
+            && read_surface.delta_col == delta_col_samples) {
             read_surface_idx = i;
             break;
         }
@@ -833,7 +884,9 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
 
         DepthSurfaceView read_only{
             .depth_view = vkutil::Image(width, height, vk::Format::eD32SfloatS8Uint),
-            .scene_timestamp = 0
+            .scene_timestamp = 0,
+            .delta_col = delta_col_samples,
+            .delta_row = delta_row_samples,
         };
         read_only.depth_view.init_image(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
         // we want a texture view with only the depth or stencil aspect bit
@@ -876,6 +929,9 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
     VKContext *context = reinterpret_cast<VKContext *>(state.context);
     vk::CommandBuffer cmd_buffer = context->prerender_cmd;
 
+    delta_row_samples *= state.res_multiplier;
+    delta_col_samples *= state.res_multiplier;
+
     read_only.depth_view.transition_to_discard(cmd_buffer, vkutil::ImageLayout::TransferDst, vkutil::ds_subresource_range);
 
     cached_info.texture.transition_to(cmd_buffer, vkutil::ImageLayout::TransferSrc, vkutil::ds_subresource_range);
@@ -883,15 +939,15 @@ std::optional<TextureLookupResult> VKSurfaceCache::retrieve_depth_stencil_as_tex
     layers.aspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
     vk::ImageCopy image_copy{
         .srcSubresource = layers,
-        .srcOffset = { 0, 0, 0 },
+        .srcOffset = { static_cast<int>(delta_col_samples), static_cast<int>(delta_row_samples), 0 },
         .dstSubresource = layers,
         .dstOffset = { 0, 0, 0 },
-        .extent = { std::min(width, cached_info.texture.width), std::min(height, cached_info.texture.height), 1U }
+        .extent = { std::min(width, cached_info.texture.width - delta_col_samples), std::min(height, cached_info.texture.height - delta_row_samples), 1U }
     };
     cmd_buffer.copyImage(cached_info.texture.image, vk::ImageLayout::eTransferSrcOptimal, read_only.depth_view.image, vk::ImageLayout::eTransferDstOptimal, image_copy);
 
     // transition back
-    cached_info.texture.transition_to(cmd_buffer, vkutil::ImageLayout::DepthReadOnly, vkutil::ds_subresource_range);
+    cached_info.texture.transition_to(cmd_buffer, vkutil::ImageLayout::DepthStencilReadOnly, vkutil::ds_subresource_range);
     read_only.depth_view.transition_to(cmd_buffer, vkutil::ImageLayout::SampledImage, vkutil::ds_subresource_range);
 
     return TextureLookupResult{
@@ -971,6 +1027,89 @@ Framebuffer &VKSurfaceCache::retrieve_framebuffer_handle(MemState &mem, SceGxmCo
     return (framebuffer_array[key] = { fb_standard, fb_interlock, color_result.base_image });
 }
 
+bool VKSurfaceCache::check_for_surface(MemState &mem, Address source_address, CallbackRequestFunction &callback, Address target_address) {
+    if (!state.features.support_memory_mapping || state.disable_surface_sync)
+        return false;
+
+    if (vector_utils::find_index(cpu_surfaces_changed, source_address) != -1) {
+        // there is a transfer operation pending on this surface, just add the callback after and we are done
+        state.request_queue.push(CallbackRequest{ new CallbackRequestFunction(std::move(callback)) });
+
+        if (target_address)
+            cpu_surfaces_changed.push_back(target_address);
+        return true;
+    }
+
+    // for now, only look if the address matches exactly a color surface
+    auto it = color_address_lookup.find(source_address);
+    if (it == color_address_lookup.end())
+        return false;
+
+    auto &surface = *it->second;
+    VKContext &context = *static_cast<VKContext *>(state.context);
+    // if the frame is already rendered skip
+    // Note: that's not the best behavior but it should be fine
+    // also it prevents invalidated surfaces from causing issues
+    if (surface.last_frame_rendered + MAX_FRAMES_RENDERING <= context.frame_timestamp)
+        return false;
+
+    // we found something
+    if (!*surface.need_surface_sync) {
+        // first send the command to sync the surface with the GPU
+        *surface.need_surface_sync = true;
+
+        // we shouldn't have a command buffer being used, but just in case
+        vk::CommandBuffer prev_cmd = context.render_cmd;
+
+        // for the time being, just create a temp command buffer / fence
+        // That's not the best approach but I guess it works
+        vk::CommandBuffer surface_cmd = nullptr;
+        vk::Fence fence = state.device.createFence({});
+        ColorSurfaceCacheInfo *returned_info = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(state.multithread_pool_mutex);
+            surface_cmd = vkutil::create_single_time_command(state.device, state.multithread_command_pool);
+
+            context.render_cmd = surface_cmd;
+            last_written_surface = &surface;
+            returned_info = perform_surface_sync();
+            context.render_cmd = prev_cmd;
+
+            surface_cmd.end();
+        }
+        // submit this command
+        vk::SubmitInfo submit_info{};
+        submit_info.setCommandBuffers(surface_cmd);
+        state.general_queue.submit(submit_info, fence);
+
+        // now we need to wait for the fence, then destroy it along with the command buffer
+        // to prevent memory leaks
+        CallbackRequestFunction vk_callback = [&state = this->state, fence, surface_cmd]() {
+            auto result = state.device.waitForFences(fence, vk::True, std::numeric_limits<uint64_t>::max());
+            if (result != vk::Result::eSuccess)
+                LOG_ERROR("Could not wait for fences.");
+
+            // destroy the objects
+            state.device.destroyFence(fence);
+
+            std::lock_guard<std::mutex> lock(state.multithread_pool_mutex);
+            state.device.freeCommandBuffers(state.multithread_command_pool, surface_cmd);
+        };
+        state.request_queue.push(CallbackRequest{ new CallbackRequestFunction(std::move(vk_callback)) });
+
+        if (returned_info)
+            state.request_queue.push(PostSurfaceSyncRequest{ returned_info });
+    }
+
+    // now push the callback
+    state.request_queue.push(CallbackRequest{ new CallbackRequestFunction(std::move(callback)) });
+
+    if (target_address)
+        cpu_surfaces_changed.push_back(target_address);
+
+    return true;
+}
+
 ColorSurfaceCacheInfo *VKSurfaceCache::perform_surface_sync() {
     // surface sync is supported only if memory mapping is enabled
     if (!state.features.support_memory_mapping)
@@ -993,8 +1132,8 @@ ColorSurfaceCacheInfo *VKSurfaceCache::perform_surface_sync() {
         is_swizzle_identity = true;
     }
 
-    if (state.res_multiplier > 1) {
-        // downscale the image using a blit command first
+    if (state.res_multiplier != 1.0f) {
+        // scale back the image using a blit command first
 
         if (!last_written_surface->blit_image)
             last_written_surface->blit_image = std::make_unique<vkutil::Image>();
@@ -1165,7 +1304,7 @@ vk::ImageView VKSurfaceCache::sourcing_color_surface_for_presentation(Ptr<const 
     if (ite == color_address_lookup.begin()) {
         return nullptr;
     }
-    ite--;
+    --ite;
 
     ColorSurfaceCacheInfo &info = *ite->second;
     if (info.data.address() + info.total_bytes <= address.address())
@@ -1177,7 +1316,7 @@ vk::ImageView VKSurfaceCache::sourcing_color_surface_for_presentation(Ptr<const 
         const size_t data_delta = address.address() - ite->first;
         uint32_t limited_height = viewport.height;
         if ((data_delta % (pitch * 4)) == 0) {
-            uint32_t start_sourced_line = (data_delta / (pitch * 4)) * state.res_multiplier;
+            uint32_t start_sourced_line = static_cast<uint32_t>((data_delta / (pitch * 4)) * state.res_multiplier);
             if ((start_sourced_line + viewport.height) > info.height) {
                 // Sometimes the surface is just missing a little bit of lines
                 if (start_sourced_line < info.height) {
@@ -1218,4 +1357,53 @@ vk::ImageView VKSurfaceCache::sourcing_color_surface_for_presentation(Ptr<const 
 
     return nullptr;
 }
-}; // namespace renderer::vulkan
+
+std::vector<uint32_t> VKSurfaceCache::dump_frame(Ptr<const void> address, uint32_t width, uint32_t height, uint32_t pitch) {
+    // get closest surface with an address below address
+    auto ite = color_address_lookup.upper_bound(address.address());
+    if (ite == color_address_lookup.begin()) {
+        return {};
+    }
+    --ite;
+
+    const ColorSurfaceCacheInfo &info = *ite->second;
+
+    const uint32_t data_delta = address.address() - ite->first;
+    const uint32_t pitch_byte = pitch * 4;
+    if (info.stride_bytes != pitch_byte || data_delta % pitch_byte != 0)
+        return {};
+
+    const uint32_t line_delta = static_cast<uint32_t>((data_delta / pitch_byte) * state.res_multiplier);
+    if (line_delta >= info.height)
+        return {};
+
+    const uint32_t real_height = std::min(height, info.height - line_delta);
+
+    std::vector<uint32_t> frame(width * height, 0);
+
+    // we need a temporary buffer and command buffer for this
+    // this is a raii buffer, it will be destroyed at the end of this function
+    vkutil::Buffer temp_buff(width * height * 4);
+    temp_buff.init_buffer(vk::BufferUsageFlagBits::eTransferDst, vkutil::vma_mapped_alloc);
+    vk::CommandBuffer cmd_buffer = vkutil::create_single_time_command(state.device, state.general_command_pool);
+
+    // layout is general, we can directly copy from it
+    vk::BufferImageCopy image_copy{
+        .bufferOffset = 0,
+        .bufferRowLength = width,
+        .bufferImageHeight = height,
+        .imageSubresource = vkutil::color_subresource_layer,
+        .imageOffset = { 0, static_cast<int>(line_delta), 0 },
+        .imageExtent = { width, real_height, 1 }
+    };
+    cmd_buffer.copyImageToBuffer(info.texture.image, vk::ImageLayout::eGeneral, temp_buff.buffer, image_copy);
+
+    // this will cause a waitIdle, not an issue
+    vkutil::end_single_time_command(state.device, state.general_queue, state.general_command_pool, cmd_buffer);
+
+    memcpy(frame.data(), temp_buff.mapped_data, frame.size() * 4);
+
+    return frame;
+}
+
+} // namespace renderer::vulkan

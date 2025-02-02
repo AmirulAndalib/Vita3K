@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2024 Vita3K team
+// Copyright (C) 2025 Vita3K team
 //
 // This file contains internal types used by Vita3K, and the
 // internal Vita3K's implementation of SceGxm's opaque types.
@@ -25,6 +25,7 @@
 
 #include <gxm/types.h>
 
+#include <array>
 #include <condition_variable>
 #include <memory>
 #include <mutex>

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2024 Vita3K team
+// Copyright (C) 2025 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,18 +17,17 @@
 
 #pragma once
 
+#include <mem/mempool.h>
+#include <mem/ptr.h>
+#include <ngs/common.h>
+#include <ngs/scheduler.h>
+#include <ngs/types.h>
+#include <util/types.h>
+
 #include <array>
 #include <cstdint>
 #include <mutex>
 #include <vector>
-
-#include <mem/ptr.h>
-#include <util/types.h>
-
-#include <mem/mempool.h>
-#include <ngs/common.h>
-#include <ngs/scheduler.h>
-#include <ngs/types.h>
 
 struct MemState;
 struct KernelState;

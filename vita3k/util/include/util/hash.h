@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2024 Vita3K team
+// Copyright (C) 2025 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,11 +15,23 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <cpu/read_arg.h>
-#include <cpu/vargs.h>
+#pragma once
 
-// Workaround for old Clang and GCC
-template <>
-module::vargs make_vargs(const LayoutArgsState &state) {
-    return module::vargs{ state };
+#include <array>
+#include <cstdint>
+#include <string>
+
+using Sha256Hash = std::array<uint8_t, 32>;
+
+Sha256Hash sha256(const void *data, size_t size);
+typedef std::array<char, 65> Sha256HashText;
+
+void hex_buf(const std::uint8_t *hash, char *dst, const std::size_t source_size);
+
+template <size_t N>
+const std::string hex_string(const std::array<uint8_t, N> &hash) {
+    std::string dst(2 * N, 0);
+    hex_buf(hash.data(), dst.data(), N);
+
+    return dst;
 }

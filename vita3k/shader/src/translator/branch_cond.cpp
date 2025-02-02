@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2024 Vita3K team
+// Copyright (C) 2025 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -208,7 +208,7 @@ inline bool is_sub_opcode(Opcode test_op) {
 
 spv::Id USSETranslatorVisitor::vtst_impl(Instruction inst, ExtPredicate pred, int zero_test, int sign_test, Imm4 load_mask, bool mask) {
     // Usually we would expect this to have a compare behavior
-    // Comparision is done by subtracting the first src by the second src, and compare the result value.
+    // Comparison is done by subtracting the first src by the second src, and compare the result value.
     // We currently optimize for that case first
     const DataType load_data_type = inst.opr.src1.type;
     const DataType store_data_type = inst.opr.dest.type;
